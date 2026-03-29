@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSession, hashPassword } from "@/lib/auth";
+import { attachSessionCookie, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     data: { email: parsed.data.email, passwordHash }
   });
 
-  await createSession(user.id);
-  return NextResponse.redirect(new URL("/memo", request.url));
+  const res = NextResponse.redirect(new URL("/memo", request.url));
+  attachSessionCookie(res, user.id);
+  return res;
 }

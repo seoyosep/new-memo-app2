@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSession, verifyPassword } from "@/lib/auth";
+import { attachSessionCookie, verifyPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
   if (!ok) return NextResponse.redirect(new URL("/login?error=invalid-credentials", request.url));
 
-  await createSession(user.id);
-  return NextResponse.redirect(new URL("/memo", request.url));
+  const res = NextResponse.redirect(new URL("/memo", request.url));
+  attachSessionCookie(res, user.id);
+  return res;
 }

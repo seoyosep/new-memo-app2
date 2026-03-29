@@ -10,6 +10,5 @@ export const prisma =
     log: ["error"]
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Vercel 서버리스에서도 웜 인스턴스마다 클라이언트 1개만 쓰도록 캐시
+globalForPrisma.prisma = prisma;

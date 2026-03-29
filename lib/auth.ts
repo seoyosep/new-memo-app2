@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 const SESSION_COOKIE_NAME = "memo_app_session";
@@ -39,19 +40,32 @@ export async function verifyPassword(password: string, passwordHash: string) {
   return bcrypt.compare(password, passwordHash);
 }
 
-export async function createSession(userId: number) {
+const sessionCookieOptions = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: SESSION_MAX_AGE_SECONDS
+};
+
+function buildSessionToken(userId: number) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS;
   const payload = toBase64Url(JSON.stringify({ userId, exp } satisfies SessionPayload));
   const signature = sign(payload);
-  const token = `${payload}.${signature}`;
+  return `${payload}.${signature}`;
+}
 
-  (await cookies()).set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS
-  });
+/** Route Handler에서 리다이렉트 응답에 쿠키를 확실히 붙일 때 사용 (Vercel 등 프로덕션) */
+export function attachSessionCookie(response: NextResponse, userId: number) {
+  response.cookies.set(SESSION_COOKIE_NAME, buildSessionToken(userId), sessionCookieOptions);
+}
+
+export function clearSessionCookie(response: NextResponse) {
+  response.cookies.delete(SESSION_COOKIE_NAME);
+}
+
+export async function createSession(userId: number) {
+  (await cookies()).set(SESSION_COOKIE_NAME, buildSessionToken(userId), sessionCookieOptions);
 }
 
 export async function clearSession() {
@@ -59,26 +73,30 @@ export async function clearSession() {
 }
 
 export async function getSessionUserId() {
-  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
+  try {
+    const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+    if (!token) return null;
 
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) return null;
+    const [payload, signature] = token.split(".");
+    if (!payload || !signature) return null;
 
-  const expectedSignature = sign(payload);
-  const validSignature =
-    Buffer.byteLength(signature) === Buffer.byteLength(expectedSignature) &&
-    timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+    const expectedSignature = sign(payload);
+    const validSignature =
+      Buffer.byteLength(signature) === Buffer.byteLength(expectedSignature) &&
+      timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
 
-  if (!validSignature) return null;
+    if (!validSignature) return null;
 
-  const decoded = JSON.parse(fromBase64Url(payload)) as SessionPayload;
-  if (!decoded.userId || !decoded.exp) return null;
+    const decoded = JSON.parse(fromBase64Url(payload)) as SessionPayload;
+    if (!decoded.userId || !decoded.exp) return null;
 
-  const now = Math.floor(Date.now() / 1000);
-  if (decoded.exp < now) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (decoded.exp < now) return null;
 
-  return decoded.userId;
+    return decoded.userId;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth() {

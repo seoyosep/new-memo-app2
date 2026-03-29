@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function MemoPage() {
   const userId = await requireAuth();
   const memos = await prisma.memo.findMany({
