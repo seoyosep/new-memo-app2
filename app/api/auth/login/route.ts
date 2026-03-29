@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachSessionCookie, verifyPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { absolutePathUrl } from "@/lib/site-url";
 
 const schema = z.object({
   email: z.string().email(),
@@ -15,15 +14,15 @@ export async function POST(request: Request) {
     email: formData.get("email"),
     password: formData.get("password")
   });
-  if (!parsed.success) return NextResponse.redirect(absolutePathUrl("/login?error=invalid", request));
+  if (!parsed.success) return NextResponse.redirect(new URL("/login?error=invalid", request.url));
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  if (!user) return NextResponse.redirect(absolutePathUrl("/login?error=invalid-credentials", request));
+  if (!user) return NextResponse.redirect(new URL("/login?error=invalid-credentials", request.url));
 
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
-  if (!ok) return NextResponse.redirect(absolutePathUrl("/login?error=invalid-credentials", request));
+  if (!ok) return NextResponse.redirect(new URL("/login?error=invalid-credentials", request.url));
 
-  const res = NextResponse.redirect(absolutePathUrl("/memo", request));
+  const res = NextResponse.redirect(new URL("/memo", request.url));
   attachSessionCookie(res, user.id);
   return res;
 }

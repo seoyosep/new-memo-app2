@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { absolutePathUrl } from "@/lib/site-url";
 
 const schema = z.object({
   title: z.string().min(1).max(100),
@@ -12,7 +11,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const userId = await getSessionUserId();
-  if (!userId) return NextResponse.redirect(absolutePathUrl("/login", request));
+  if (!userId) return NextResponse.redirect(new URL("/login", request.url));
 
   const formData = await request.formData();
   const parsed = schema.safeParse({
@@ -25,5 +24,5 @@ export async function POST(request: Request) {
     data: { title: parsed.data.title, content: parsed.data.content, userId }
   });
   revalidatePath("/memo");
-  return NextResponse.redirect(absolutePathUrl("/memo", request));
+  return NextResponse.redirect(new URL("/memo", request.url));
 }
