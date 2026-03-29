@@ -13,7 +13,15 @@ export default async function LoginPage({
   const errorMessage =
     error === "invalid-credentials" || error === "invalid"
       ? "이메일 또는 비밀번호가 올바르지 않습니다."
-      : "";
+      : error === "config-db"
+        ? "DATABASE_URL이 없습니다. Vercel 환경 변수에 트랜잭션 풀러(6543) 연결 문자열을 넣으세요."
+        : error === "config-direct"
+          ? "DIRECT_URL이 없습니다. Prisma용 세션 풀러(5432) 또는 직접 연결 문자열을 Vercel에 추가하세요."
+          : error === "config-session"
+            ? "SESSION_SECRET이 없거나 16자 미만입니다. Vercel에 16자 이상 임의 문자열을 설정하세요."
+            : error === "server"
+              ? "서버 오류가 발생했습니다. DB 연결·마이그레이션을 확인하거나 잠시 후 다시 시도하세요."
+              : "";
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">

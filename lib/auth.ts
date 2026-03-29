@@ -20,6 +20,15 @@ function getSecret() {
   return secret;
 }
 
+/** API 라우트에서 사전 검사용 — 미설정 시 세션/Prisma에서 500 방지 */
+export function getAuthEnvIssue(): "database" | "direct" | "session" | null {
+  if (!process.env.DATABASE_URL?.trim()) return "database";
+  if (!process.env.DIRECT_URL?.trim()) return "direct";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 16) return "session";
+  return null;
+}
+
 function toBase64Url(value: string) {
   return Buffer.from(value, "utf-8").toString("base64url");
 }

@@ -15,7 +15,15 @@ export default async function RegisterPage({
       ? "이미 사용 중인 이메일입니다."
       : error === "invalid"
         ? "입력값을 확인해주세요."
-        : "";
+        : error === "config-db"
+          ? "DATABASE_URL을 Vercel 환경 변수에 설정하세요."
+          : error === "config-direct"
+            ? "DIRECT_URL을 Vercel 환경 변수에 설정하세요."
+            : error === "config-session"
+              ? "SESSION_SECRET(16자 이상)을 Vercel에 설정하세요."
+              : error === "server"
+                ? "서버 오류가 발생했습니다. 잠시 후 다시 시도하세요."
+                : "";
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
